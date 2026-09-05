@@ -1,6 +1,6 @@
 # Analog Temperature Controller with Hysteresis
 
-Designed, built, and simulated an analog closed-loop temperature controller using a thermistor, op-amp signal conditioning, a Schmitt trigger, an NPN transistor, and resistive heating elements.
+Built and simulated an analog closed-loop temperature controller using a thermistor, op-amp signal conditioning, a Schmitt trigger, an NPN transistor, and resistive heating elements.
 
 ## Project Overview
 
