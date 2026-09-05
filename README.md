@@ -1,112 +1,203 @@
 # Analog Temperature Controller with Hysteresis
 
-Built and simulated an analog closed-loop temperature controller using a thermistor, op-amp signal conditioning, a Schmitt trigger, an NPN transistor, and resistive heating elements.
+Built, simulated, and tested an analog closed-loop temperature controller using a thermistor, op-amp signal conditioning, a Schmitt trigger, an NPN transistor, and resistive heating elements.
 
 ## Project Overview
 
-The goal of this project was to maintain temperature within a defined range using analog feedback.
+The goal of this project was to maintain temperature within a defined range using analog feedback and hysteresis.
 
 The control chain is:
 
-Temperature → Thermistor → Voltage Divider → Buffers → Differential Amplifier → Schmitt Trigger → BJT Switch → Heater
+**Temperature → Thermistor → Voltage Divider → Voltage Buffers → Differential Amplifier → Schmitt Trigger → BJT Switch → Heater**
+
+## Circuit Schematic
+
+The complete system combines sensing, signal conditioning, hysteresis, and power switching in one analog control loop.
+
+![Circuit Schematic](images/Circuitschematic.png)
 
 ## Key Features
 
 - NTC thermistor temperature sensing
 - Differential signal conditioning
 - Schmitt-trigger hysteresis
-- NPN low-side switching
+- NPN low-side heater switching
 - Resistive heater load
 - LTspice transient simulation
+- Physical prototype validation
 - Simulation-to-hardware comparison
 
-## Thermistor Characterization
+## 1. Thermistor Characterization
+
+The thermistor was experimentally characterized by measuring resistance at different temperatures.
 
 Measured data:
 
 - 74.7°F → 569 Ω
 - 90.4°F → 435 Ω
 
-Linear approximation:
+A linear approximation was used over the operating range:
 
+\[
 R_T = -8.53503T + 1206.56688
+\]
 
-## Design Targets
+The negative slope confirms the thermistor's NTC behavior: resistance decreases as temperature increases.
 
-Target switching temperatures:
+![Thermistor Characterization](images/thermistor_characterization.png)
 
-- Heater ON: ~83°F
-- Heater OFF: ~87°F
+## 2. Design Targets
 
-Thermistor resistances:
+The controller was designed around a temperature band of approximately:
 
-- R_T(83°F) ≈ 498.16 Ω
-- R_T(87°F) ≈ 464.02 Ω
+- **Heater ON:** 83°F
+- **Heater OFF:** 87°F
 
-## Signal Conditioning
+Using the thermistor model:
 
-The thermistor voltage divider produces approximately:
+\[
+R_T(83^\circ F) \approx 498.16\Omega
+\]
 
-- V2(83°F) ≈ 2.456 V
-- V2(87°F) ≈ 2.544 V
+\[
+R_T(87^\circ F) \approx 464.02\Omega
+\]
 
-The differential amplifier uses approximately:
+The temperature-sensitive voltage divider therefore produces approximately:
 
-- Ra = 100 Ω
-- Rb = 1082 Ω
+\[
+V_2(83^\circ F) \approx 2.456V
+\]
 
-Giving a gain of:
+\[
+V_2(87^\circ F) \approx 2.544V
+\]
 
-Av = Rb / Ra ≈ 10.82
+## 3. Signal Conditioning
 
-## Schmitt Trigger
+Because the sensor voltage only changes by approximately:
 
-The Schmitt trigger introduces hysteresis so the heater does not rapidly switch ON and OFF around a single threshold.
+\[
+\Delta V_2 \approx 88mV
+\]
 
-Measured physical thresholds:
+between the design temperatures, a differential amplifier is used to amplify the difference between the thermistor signal and the reference voltage.
 
-- Vut ≈ +0.5369 V
-- Vlt ≈ -0.431 V
+The differential stage uses:
 
-## LTspice Simulation
+- \(R_a = 100\Omega\)
+- \(R_b = 1082\Omega\)
 
-A continuous transient simulation was used to vary temperature from 80°F to 90°F and back to 80°F.
+giving approximately:
 
-The simulation demonstrated:
+\[
+A_v = \frac{R_b}{R_a}
+\]
+
+\[
+A_v \approx 10.82
+\]
+
+Voltage followers are used ahead of the differential stage to buffer the thermistor and reference networks.
+
+## 4. Schmitt Trigger and Hysteresis
+
+The Schmitt trigger introduces two switching thresholds instead of a single switching point.
+
+Measured physical thresholds were approximately:
+
+\[
+V_{UT} = +0.5369V
+\]
+
+\[
+V_{LT} = -0.431V
+\]
+
+This hysteresis prevents rapid switching when the measured temperature is close to the desired operating point.
+
+The resulting behavior is:
+
+**Low temperature → Schmitt output HIGH → transistor ON → heater ON**
+
+**High temperature → Schmitt output LOW → transistor OFF → heater OFF**
+
+## 5. LTspice Simulation
+
+The full circuit was recreated in LTspice.
+
+A continuous transient simulation varied the modeled thermistor temperature from:
+
+\[
+80^\circ F \rightarrow 90^\circ F \rightarrow 80^\circ F
+\]
+
+This allowed the Schmitt trigger to retain state and demonstrate true hysteresis.
+
+The simulation showed:
 
 - heater ON at low temperature
-- heater OFF after crossing the upper threshold
-- delayed turn-on during cooling
-- hysteresis behavior in the control loop
+- switching OFF after crossing the upper threshold
+- heater remaining OFF during initial cooling
+- switching back ON only after crossing the lower threshold
 
-## Hardware Results
+![LTspice Transient Response](images/ltspice_transient_response.png)
 
-The physical system switched:
+The LTspice schematic file is available in:
 
-- OFF at approximately 88.7°F
-- ON at approximately 86.7°F
+[`ltspice/hysteresis_temperature_controller.asc`](ltspice/hysteresis_temperature_controller.asc)
 
-## Simulation vs Hardware
+## 6. Physical Prototype
 
-The LTspice simulation uses an idealized op-amp model that saturates closer to the supply rails than the physical device.
+The circuit was also constructed and tested on a breadboard.
 
-This shifts the Schmitt-trigger thresholds and illustrates the importance of nonideal device behavior in analog design.
+![Physical Prototype](images/physical_prototype.png)
 
-## Tools
+The measured hardware switching temperatures were:
+
+- **Heater OFF:** approximately 88.7°F
+- **Heater ON:** approximately 86.7°F
+
+## 7. Simulation vs Hardware
+
+The simulation and physical circuit show the same fundamental hysteresis behavior, but the exact switching points differ.
+
+One important source of difference is op-amp saturation.
+
+The physical circuit measured approximately:
+
+\[
++V_{sat} = 4.330V
+\]
+
+\[
+-V_{sat} = -3.480V
+\]
+
+while the generic LTspice op-amp model saturates much closer to the ±5 V supply rails.
+
+Because the Schmitt-trigger thresholds depend on output saturation voltage, this shifts the simulated switching temperatures.
+
+Other sources of deviation include:
+
+- component tolerances
+- simplified linear thermistor modeling
+- transistor nonidealities
+- thermal lag
+- limited thermistor calibration data
+
+This comparison highlights the difference between idealized circuit simulation and real hardware behavior.
+
+## Tools and Concepts
 
 - LTspice
-- Op-Amps
-- NTC Thermistor
-- Schmitt Trigger
+- Operational Amplifiers
+- NTC Thermistors
+- Differential Amplifiers
+- Schmitt Triggers
+- Positive Feedback
+- Hysteresis
 - BJT Switching
 - Analog Feedback
 - Circuit Analysis
 - Breadboard Prototyping
-
-## Files
-
-- LTspice schematic
-- Project report
-- Design calculations
-- Simulation plots
-- Physical prototype images
